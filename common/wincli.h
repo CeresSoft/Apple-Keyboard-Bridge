@@ -27,6 +27,8 @@ enum
 
 enum
 {
+	VK_BACK       = 0x08, // Back Space
+
 	VK_KANJI      = 0x19,
 	VK_CONVERT    = 0x1C,
 	VK_NONCONVERT = 0x1D,

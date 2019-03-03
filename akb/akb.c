@@ -32,6 +32,7 @@ const static WORD PID_APPLE_KEYBOARD[] =
 	0x0257, /* Apple Wireless Keyboard JIS 2011 */
 	0x0265, /* Apple Magic Keyboard US  2015    */
 	0x0267, /* Apple Magic Keyboard JIS 2015    */
+	0x0279, /* Mac Book 12                      */
 };
 static BOOL IsSupportedDevice(WORD vid, WORD pid)
 {
@@ -261,6 +262,7 @@ static void Config_Initialize(void)
 	config.Fn.Left   = CONFIG_INIT_FN_LEFT;
 	config.Fn.Right  = CONFIG_INIT_FN_RIGHT;
 	config.Fn.Eject  = CONFIG_INIT_FN_EJECT;
+	config.Fn.Esc    = CONFIG_INIT_FN_ESC;
 	/* external commands */
 	ZeroMemory(config.cbCmds, sizeof config.cbCmds);
 	ZeroMemory(config_szCmds, sizeof config_szCmds);
@@ -356,6 +358,11 @@ static UINT Fire(UINT what)
 
 static UINT OnKeyDown(DWORD vkCode)
 {
+	{
+		WCHAR pszBuf[256];
+		swprintf(pszBuf, 256, _T("VK=%X Fu=%d"), vkCode, Status.Fn);
+		OutputDebugString(pszBuf);
+	}
 	if (Status.Fn) {
 		switch (vkCode) {
 		case VK_BACK : return Fire(config.Fn.Del  );
@@ -375,6 +382,14 @@ static UINT OnKeyDown(DWORD vkCode)
 		case VK_F10  : return Fire(config.Fn.F10  );
 		case VK_F11  : return Fire(config.Fn.F11  );
 		case VK_F12  : return Fire(config.Fn.F12  );
+		case VK_ESCAPE: return Fire(config.Fn.Esc );
+		}
+	}
+	else
+	{
+		switch (vkCode) {
+			//MAC BOOK 12 (Fn + ESC on BootCamp)
+		case VK_PAUSE: return Fire(config.Fn.Esc);
 		}
 	}
 	return FALL_THROUGH;

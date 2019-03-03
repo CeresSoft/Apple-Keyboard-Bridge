@@ -98,6 +98,8 @@ namespace akbcf
 		System::Windows::Forms::Button^ Apply;
 
 		System::Windows::Forms::OpenFileDialog^ FileDlg;
+	private: System::Windows::Forms::RadioButton^  Esc;
+	private: System::Windows::Forms::RadioButton^  FnEsc;
 
 	private:
 		/// <summary>
@@ -114,6 +116,7 @@ namespace akbcf
 		{
 			this->Tab = (gcnew System::Windows::Forms::TabControl());
 			this->Singles = (gcnew System::Windows::Forms::TabPage());
+			this->Esc = (gcnew System::Windows::Forms::RadioButton());
 			this->F1 = (gcnew System::Windows::Forms::RadioButton());
 			this->F2 = (gcnew System::Windows::Forms::RadioButton());
 			this->F3 = (gcnew System::Windows::Forms::RadioButton());
@@ -136,6 +139,7 @@ namespace akbcf
 			this->Down = (gcnew System::Windows::Forms::RadioButton());
 			this->Right = (gcnew System::Windows::Forms::RadioButton());
 			this->Combinations = (gcnew System::Windows::Forms::TabPage());
+			this->FnEsc = (gcnew System::Windows::Forms::RadioButton());
 			this->FnF1 = (gcnew System::Windows::Forms::RadioButton());
 			this->FnF2 = (gcnew System::Windows::Forms::RadioButton());
 			this->FnF3 = (gcnew System::Windows::Forms::RadioButton());
@@ -191,6 +195,7 @@ namespace akbcf
 			// 
 			// Singles
 			// 
+			this->Singles->Controls->Add(this->Esc);
 			this->Singles->Controls->Add(this->F1);
 			this->Singles->Controls->Add(this->F2);
 			this->Singles->Controls->Add(this->F3);
@@ -212,14 +217,28 @@ namespace akbcf
 			this->Singles->Controls->Add(this->Left);
 			this->Singles->Controls->Add(this->Down);
 			this->Singles->Controls->Add(this->Right);
-			this->Singles->Location = System::Drawing::Point(4, 24);
+			this->Singles->Location = System::Drawing::Point(4, 25);
 			this->Singles->Margin = System::Windows::Forms::Padding(0);
 			this->Singles->Name = L"Singles";
 			this->Singles->Padding = System::Windows::Forms::Padding(3);
-			this->Singles->Size = System::Drawing::Size(646, 117);
+			this->Singles->Size = System::Drawing::Size(646, 116);
 			this->Singles->TabIndex = 0;
 			this->Singles->Text = L"単独";
 			this->Singles->UseVisualStyleBackColor = true;
+			// 
+			// Esc
+			// 
+			this->Esc->Appearance = System::Windows::Forms::Appearance::Button;
+			this->Esc->Enabled = false;
+			this->Esc->Location = System::Drawing::Point(0, 30);
+			this->Esc->Margin = System::Windows::Forms::Padding(0);
+			this->Esc->Name = L"Esc";
+			this->Esc->Size = System::Drawing::Size(45, 25);
+			this->Esc->TabIndex = 22;
+			this->Esc->Text = L"ESC";
+			this->Esc->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->Esc->UseVisualStyleBackColor = true;
+			this->Esc->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
 			// 
 			// F1
 			// 
@@ -513,6 +532,7 @@ namespace akbcf
 			// 
 			// Combinations
 			// 
+			this->Combinations->Controls->Add(this->FnEsc);
 			this->Combinations->Controls->Add(this->FnF1);
 			this->Combinations->Controls->Add(this->FnF2);
 			this->Combinations->Controls->Add(this->FnF3);
@@ -534,13 +554,26 @@ namespace akbcf
 			this->Combinations->Controls->Add(this->FnLeft);
 			this->Combinations->Controls->Add(this->FnDown);
 			this->Combinations->Controls->Add(this->FnRight);
-			this->Combinations->Location = System::Drawing::Point(4, 24);
+			this->Combinations->Location = System::Drawing::Point(4, 25);
 			this->Combinations->Name = L"Combinations";
 			this->Combinations->Padding = System::Windows::Forms::Padding(3);
-			this->Combinations->Size = System::Drawing::Size(646, 117);
+			this->Combinations->Size = System::Drawing::Size(646, 116);
 			this->Combinations->TabIndex = 1;
 			this->Combinations->Text = L"Fn +";
 			this->Combinations->UseVisualStyleBackColor = true;
+			// 
+			// FnEsc
+			// 
+			this->FnEsc->Appearance = System::Windows::Forms::Appearance::Button;
+			this->FnEsc->Location = System::Drawing::Point(0, 30);
+			this->FnEsc->Margin = System::Windows::Forms::Padding(0);
+			this->FnEsc->Name = L"FnEsc";
+			this->FnEsc->Size = System::Drawing::Size(45, 25);
+			this->FnEsc->TabIndex = 23;
+			this->FnEsc->Text = L"ESC";
+			this->FnEsc->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->FnEsc->UseVisualStyleBackColor = true;
+			this->FnEsc->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
 			// 
 			// FnF1
 			// 
@@ -969,6 +1002,7 @@ namespace akbcf
 			this->Action->ResumeLayout(false);
 			this->Action->PerformLayout();
 			this->ResumeLayout(false);
+
 		}
 #pragma endregion
 

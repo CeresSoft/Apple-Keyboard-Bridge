@@ -59,6 +59,7 @@ namespace akbcf
 		config->Fn.Left   = CONFIG_INIT_FN_LEFT;
 		config->Fn.Right  = CONFIG_INIT_FN_RIGHT;
 		config->Fn.Eject  = CONFIG_INIT_FN_EJECT;
+		config->Fn.Esc    = CONFIG_INIT_FN_ESC;
 		/* length of command */
 		config->cbCmds = gcnew array<WORD>(CONFIG_NUM_CMDS);
 	}
@@ -81,6 +82,7 @@ namespace akbcf
 		this->InputKeys[VK_F24              ] = L"F24";
 		this->InputKeys[VK_INSERT           ] = L"Insert";
 		this->InputKeys[VK_DELETE           ] = L"Delete";
+		this->InputKeys[VK_BACK             ] = L"Back Space";
 		this->InputKeys[VK_HOME             ] = L"Home";
 		this->InputKeys[VK_END              ] = L"End";
 		this->InputKeys[VK_PRIOR            ] = L"Page Up";
@@ -301,6 +303,7 @@ namespace akbcf
 			if (this->FnLeft->Checked ) return this->ConfigData->Fn.Left;
 			if (this->FnRight->Checked) return this->ConfigData->Fn.Right;
 			if (this->FnEject->Checked) return this->ConfigData->Fn.Eject;
+			if (this->FnEsc->Checked  ) return this->ConfigData->Fn.Esc;
 		}
 		static WORD dummy;
 		return dummy = 0;

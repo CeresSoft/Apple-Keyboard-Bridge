@@ -52,7 +52,7 @@ typedef nopadding ref_struct Config
 	val_struct Fn
 	{
 		WORD F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12;
-		WORD Del, Up, Down, Left, Right, Eject;
+		WORD Del, Up, Down, Left, Right, Eject, Esc;
 	} Fn;
 	/* WORD cbCmd[CONFIG_NUM_CMDS] */
 	fixed_array(WORD, cbCmds, CONFIG_NUM_CMDS);
@@ -96,6 +96,7 @@ enum
 	CONFIG_INIT_FN_LEFT   = VK_HOME,
 	CONFIG_INIT_FN_RIGHT  = VK_END,
 	CONFIG_INIT_FN_EJECT  = FIRE_EJECT,
+	CONFIG_INIT_FN_ESC    = VK_SNAPSHOT,
 };
 
 enum
