@@ -32,7 +32,8 @@ const static WORD PID_APPLE_KEYBOARD[] =
 	0x0257, /* Apple Wireless Keyboard JIS 2011 */
 	0x0265, /* Apple Magic Keyboard US  2015    */
 	0x0267, /* Apple Magic Keyboard JIS 2015    */
-	0x0279, /* Mac Book 12                      */
+	0x026C, /* Apple Magic Keyboard US  2018    */
+	0x0279, /* Mac Book 12 2017s                 */
 };
 static BOOL IsSupportedDevice(WORD vid, WORD pid)
 {
