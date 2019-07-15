@@ -59,7 +59,10 @@ namespace akbcf
 		config->Fn.Left   = CONFIG_INIT_FN_LEFT;
 		config->Fn.Right  = CONFIG_INIT_FN_RIGHT;
 		config->Fn.Eject  = CONFIG_INIT_FN_EJECT;
+		//2019.07.15:SUGIHARA:ADD >>>>>
 		config->Fn.Esc    = CONFIG_INIT_FN_ESC;
+		//2019.07.15:SUGIHARA:ADD <<<<<
+
 		/* length of command */
 		config->cbCmds = gcnew array<WORD>(CONFIG_NUM_CMDS);
 	}
@@ -303,7 +306,9 @@ namespace akbcf
 			if (this->FnLeft->Checked ) return this->ConfigData->Fn.Left;
 			if (this->FnRight->Checked) return this->ConfigData->Fn.Right;
 			if (this->FnEject->Checked) return this->ConfigData->Fn.Eject;
+			//2019.07.15:SUGIHARA:ADD >>>>>
 			if (this->FnEsc->Checked  ) return this->ConfigData->Fn.Esc;
+			//2019.07.15:SUGIHARA:ADD <<<<<
 		}
 		static WORD dummy;
 		return dummy = 0;

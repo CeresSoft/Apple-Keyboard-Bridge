@@ -1,6 +1,7 @@
 # Output directories
 bin/
 obj/
+.vs/
 
 # Visual Studio files
 *.aps

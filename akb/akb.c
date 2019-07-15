@@ -6,6 +6,55 @@
 
 #include "resource.h"
 
+ 
+//2019.07.15:SUGIHARA:ADD >>>>>
+static void DEBUG(LPCTSTR format, ...)
+{
+#if _DEBUG
+	va_list args;
+	va_start(args, format);
+
+	int n  = _vsctprintf(format, args);
+	if (n <= 0)
+	{
+		//出力文字列なし
+		//何もしない(va_endするためreturnしてはいけない)
+	}
+	else
+	{
+		//出力文字列あり
+		int sz = sizeof(TCHAR) * (n + 1);
+		TCHAR* buff = (TCHAR*)malloc(sz);
+		if (buff == NULL)
+		{
+			//バッファ確保失敗
+			//何もしない(va_endするためreturnしてはいけない)
+		}
+		else
+		{
+			//バッファ確保成功
+			int ret = _vstprintf(buff, sz, format, args);
+			if (ret < 0)
+			{
+				//文字列化失敗
+				//何もしない(freeするためreturnしてはいけない)
+			}
+			else
+			{
+				//文字列化成功
+				OutputDebugString(buff);
+			}
+
+			//バッファ開放
+			free(buff);
+		}
+	}
+
+	va_end(args);
+#endif
+}
+//2019.07.15:SUGIHARA:ADD <<<<<
+
 BYTE addsb(BYTE x, int a)
 {
 	/* Add with Saturation in BYTE */
@@ -32,19 +81,66 @@ const static WORD PID_APPLE_KEYBOARD[] =
 	0x0257, /* Apple Wireless Keyboard JIS 2011 */
 	0x0265, /* Apple Magic Keyboard US  2015    */
 	0x0267, /* Apple Magic Keyboard JIS 2015    */
+	//2019.07.15:SUGIHARA:ADD >>>>>
 	0x026C, /* Apple Magic Keyboard US  2018    */
+	//2019.07.15:SUGIHARA:ADD <<<<<
+};
+//2019.07.15:SUGIHARA:ADD >>>>>
+const static WORD PID_BOOTCAMP_KEYBOARD[] =
+{
 	0x0279, /* Mac Book 12 2017s                 */
 };
+//2019.07.15:SUGIHARA:ADD <<<<<
+
 static BOOL IsSupportedDevice(WORD vid, WORD pid)
 {
-	if (vid == VID_APPLE) {
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	//if (vid == VID_APPLE) {
+	//	UINT i;
+	//	for (i = 0; i < ARRAYSIZE(PID_APPLE_KEYBOARD); i++) {
+	//		if (pid == PID_APPLE_KEYBOARD[i])
+	//			return TRUE;
+	//	}
+	//}
+	//return FALSE;
+	//----------
+	//Apple Vender ID判定
+	if (vid != VID_APPLE)
+	{
+		//異なる場合は終了
+		return FALSE;
+	}
+	//Apple Keyboard
+	{
 		UINT i;
-		for (i = 0; i < ARRAYSIZE(PID_APPLE_KEYBOARD); i++) {
+		UINT m = ARRAYSIZE(PID_APPLE_KEYBOARD);
+		for (i = 0; i < m; i++)
+		{
 			if (pid == PID_APPLE_KEYBOARD[i])
+			{
+				//非Boot Camp環境
+				Status.BootCampEnvironment = FALSE;
 				return TRUE;
+			}
 		}
 	}
+	//Boot Camp Keyboard
+	{
+		UINT i;
+		UINT m = ARRAYSIZE(PID_BOOTCAMP_KEYBOARD);
+		for (i = 0; i < m; i++)
+		{
+			if (pid == PID_BOOTCAMP_KEYBOARD[i])
+			{
+				//Boot Camp環境
+				Status.BootCampEnvironment = TRUE;
+				return TRUE;
+			}
+		}
+	}
+	//ここまで来たら該当なし
 	return FALSE;
+	//2019.07.15:SUGIHARA:ADD <<<<<
 }
 
 const struct AppIcon
@@ -263,7 +359,9 @@ static void Config_Initialize(void)
 	config.Fn.Left   = CONFIG_INIT_FN_LEFT;
 	config.Fn.Right  = CONFIG_INIT_FN_RIGHT;
 	config.Fn.Eject  = CONFIG_INIT_FN_EJECT;
+	//2019.07.15:SUGIHARA:ADD >>>>>
 	config.Fn.Esc    = CONFIG_INIT_FN_ESC;
+	//2019.07.15:SUGIHARA:ADD <<<<<
 	/* external commands */
 	ZeroMemory(config.cbCmds, sizeof config.cbCmds);
 	ZeroMemory(config_szCmds, sizeof config_szCmds);
@@ -297,6 +395,10 @@ static void Config_Load(void)
 static struct Status
 {
 	BOOL Fn;
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	BOOL BootCampEnvironment;
+	//2019.07.15:SUGIHARA:ADD <<<<<
+
 } Status;
 static void Status_Initialize(void)
 {
@@ -359,11 +461,9 @@ static UINT Fire(UINT what)
 
 static UINT OnKeyDown(DWORD vkCode)
 {
-	{
-		WCHAR pszBuf[256];
-		swprintf(pszBuf, 256, _T("VK=%X Fu=%d"), vkCode, Status.Fn);
-		OutputDebugString(pszBuf);
-	}
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	DEBUG(_T("VK=0x%X Fn=%d\n"), vkCode, Status.Fn);
+	//2019.07.15:SUGIHARA:ADD <<<<<
 	if (Status.Fn) {
 		switch (vkCode) {
 		case VK_BACK : return Fire(config.Fn.Del  );
@@ -383,16 +483,37 @@ static UINT OnKeyDown(DWORD vkCode)
 		case VK_F10  : return Fire(config.Fn.F10  );
 		case VK_F11  : return Fire(config.Fn.F11  );
 		case VK_F12  : return Fire(config.Fn.F12  );
+		//2019.07.15:SUGIHARA:ADD >>>>>
 		case VK_ESCAPE: return Fire(config.Fn.Esc );
+		default:
+			break;
+		//2019.07.15:SUGIHARA:ADD <<<<<
 		}
 	}
+	//2019.07.15:SUGIHARA:ADD >>>>>
 	else
 	{
 		switch (vkCode) {
+		case VK_PAUSE:
 			//MAC BOOK 12 (Fn + ESC on BootCamp)
-		case VK_PAUSE: return Fire(config.Fn.Esc);
+			if (Status.BootCampEnvironment)
+			{
+				return Fire(config.Fn.Esc);
+			}
+			break;
+		case VK_DELETE:
+			//MAC BOOK 12 (Fn + DELETE on BootCamp)
+			if (Status.BootCampEnvironment)
+			{
+				return Fire(config.Fn.Del);
+			}
+			break;
+		default:
+			break;
 		}
 	}
+	//2019.07.15:SUGIHARA:ADD <<<<<
+
 	return FALL_THROUGH;
 }
 
