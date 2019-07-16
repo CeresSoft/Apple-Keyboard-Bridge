@@ -31,6 +31,32 @@ public value struct App
 	literal System::String^ Title = L"Apple Keyboard Bridge";
 };
 #endif
+//2019.07.16:SUGIHARA:ADD >>>>>
+#ifndef _MANAGED
+#define LAYOUT_TYPE_WIRELESS _T("WIRELESS")
+#define LAYOUT_TYPE_MAGIC _T("MAGIC")
+#define LAYOUT_TYPE_BOOTCAMP _T("BOOTCAMP")
+
+#define LAYOUT_LANG_JP _T("JP")
+#define LAYOUT_LANG_US _T("US")
+
+#define LAYOUT_SIZE_FULL _T("FULL")
+#define LAYOUT_SIZE_MINI _T("MINI")
+#else
+public value struct KayboardLayoutConst
+{
+	literal System::String^ TypeWireless = L"WIRELESS";
+	literal System::String^ TypeMagic = L"MAGIC";
+	literal System::String^ TypeBootCamp = L"BOOTCAMP";
+
+	literal System::String^ LangJP = L"JP";
+	literal System::String^ LangUS = L"US";
+
+	literal System::String^ SizeFULL = L"FULL";
+	literal System::String^ SizeMINI = L"MINI";
+};
+#endif
+//2019.07.16:SUGIHARA:ADD <<<<<
 
 enum
 {

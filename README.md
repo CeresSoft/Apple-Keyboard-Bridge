@@ -40,6 +40,18 @@ License
 
 
 # 杉原追記
+## ビルド環境
+必要なものVisual Studio 2015(VCのコンパイラがVS2015になってるのでVS2017とかではダメのようです)
+
+Visual Studio 2015のセットアップで必要なもの
+
+![006.png](./readme-images/006.png)
+
+またプロジェクトを起動したときに以下画面が出るので「インストール」をクリックしてください
+
+![007.png](./readme-images/007.png)
+
+
 ## Apple Magic KeyboardのPID追加方法
 
 akbプロジェクトのakb.cにキーボードのPIDが指定されている
@@ -53,6 +65,7 @@ VID_APPLEとあるのがAppleのベンダーIDで、「0x05AC」である
 
 akb.exeが起動しない場合はキーボードのPIDが登録されていない場合があります
 追加するにはデバイスマネージャーで「ヒューマンインターフェイスデバイス」の配下にある「HID準拠コシューマー制御デバイス」の中からAPPLEのVID(=0x05AC)を持ったデバイスを探します
+(以下では4つのHID準拠コンシューマー制御デバイスが在りますが、このうちのどれかがAppleKeyboardです)
 
 ![003.png](./readme-images/003.png)
 
@@ -215,3 +228,81 @@ if (power)
     Fire(config.Key.Power);
 ```
 でPowerキーの処理を行っています
+
+## akbcf
+Apple Keyboard Bridgeは2つのEXEからできています
+
+１つはC言語＋WindowsSDKで書かれた`akb`で、これが本体
+
+もう１つはManeged C++で書かれた`akbcf`で、これは設定を変更するFormアプリケーションになります
+
+`akbcf`は`akb`から呼び出されます
+
+`akbcf`で難しいのがタブコントロールで`単独`タブ
+
+![008.png](./readme-images/008.png)
+
+と、`Fn+`タブ
+
+![008.png](./readme-images/008.png)
+
+見た目は変わらないが、アクショングループより上にある`F１`等のラジオボタンは
+コントロールが全く異なっている
+(=`F1`の例で、`単独`タブでは`F1`ラジオボタンで、`Fn+`タブでは`FnF1`ラジオボタン)
+ので注意してください。
+
+タブが切り替わった時のコントロールの無効化は、ラジオボタンの`Enabled`プロパティを`false`に設定してあります
+
+### akbcf呼び出し
+`akb.c`の`WinProc()`内の以下の部分で起動しています
+```
+case WM_COMMAND:
+    switch (LOWORD(wParam)) {
+    case ID_CONF:
+        {
+            TCHAR cmd[MAX_PATH];
+            GetModuleFileName(NULL, cmd, ARRAYSIZE(cmd));
+            lstrcpy(cmd + lstrlen(cmd) - 4, TEXT("cf"));
+            Exec(cmd);
+        }
+        break;
+```
+
+## commonプロジェクト
+commonプロジェクトは`akb`と`akbcf`の2つのプロジェクト両方から参照される
+ヘッダがあります
+
+`akbcf`の仮想キーの定義は`wincli.h`に定義されています
+
+`akb.h`の以下に追加したときは
+```
+enum
+{
+	/* single action keys */
+	CONFIG_INIT_KEY_POWER = FIRE_POWER,
+    ...
+	CONFIG_INIT_FN_RIGHT  = VK_END,
+	CONFIG_INIT_FN_EJECT  = FIRE_EJECT,
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	CONFIG_INIT_FN_ESC    = VK_PAUSE,
+	//2019.07.15:SUGIHARA:ADD <<<<<
+};
+```
+
+managed c++で使う仮想キーコードを`wincli.h`に追加することを忘れないでください
+```
+enum
+{
+	VK_BACK       = 0x08, // Back Space
+
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	VK_PAUSE      = 0x13, // PAUSE
+	//2019.07.15:SUGIHARA:ADD <<<<<
+
+	VK_KANJI      = 0x19,
+    ...
+	VK_MEDIA_PLAY_PAUSE  = 0xB3,
+	VK_LAUNCH_MAIL       = 0xB4,
+ };
+
+```

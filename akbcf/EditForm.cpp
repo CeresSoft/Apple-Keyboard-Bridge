@@ -332,6 +332,49 @@ namespace akbcf
 
 	System::Void EditForm::EditForm_Load(System::Object^ /*sender*/, System::EventArgs^ /*e*/)
 	{
+		//2019.07.16:SUGIHARA:ADD >>>>>
+		{
+			array<String^>^ args = System::Environment::GetCommandLineArgs();
+			if (2 <= args->Length)
+			{
+				String^ szParam = args[1];
+				this->KeyboardLayout = szParam;
+				if (szParam->Contains(KayboardLayoutConst::TypeBootCamp))
+				{
+					//BOOT CAMP環境の場合はファンクションキーを無効化
+					//2019.07.15:SUGIHARA:やってみたところakbではFn+F1～Fn+F12は拾えなかった
+					this->FnF1->Enabled = false;
+					this->FnF2->Enabled = false;
+					this->FnF3->Enabled = false;
+					this->FnF4->Enabled = false;
+					this->FnF5->Enabled = false;
+					this->FnF6->Enabled = false;
+					this->FnF7->Enabled = false;
+					this->FnF8->Enabled = false;
+					this->FnF9->Enabled = false;
+					this->FnF10->Enabled = false;
+					this->FnF11->Enabled = false;
+					this->FnF12->Enabled = false;
+				}
+			}
+			else
+			{
+				this->KeyboardLayout = L"UNKNOWN";
+			}
+			if (3 <= args->Length)
+			{
+				String^ szName = args[2];
+				this->label1->Text = szName;
+				this->label2->Text = szName;
+			}
+			else
+			{
+				this->label1->Text = L"-- UNKNOWN --";
+				this->label2->Text = L"-- UNKNOWN --";
+			}
+		}
+		//2019.07.16:SUGIHARA:ADD >>>>>
+
 		for each (KeyValuePair<WORD, String^>^ it in this->InputKeys)
 			this->InputKeyList->Items->Add(it->Value);
 		for each (KeyValuePair<WORD, String^>^ it in this->Specials)

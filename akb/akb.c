@@ -23,8 +23,9 @@ static void DEBUG(LPCTSTR format, ...)
 	else
 	{
 		//出力文字列あり
-		int sz = sizeof(TCHAR) * (n + 1);
-		TCHAR* buff = (TCHAR*)malloc(sz);
+		int len = n + 1;
+		int size = sizeof(TCHAR) * len;
+		TCHAR* buff = (TCHAR*)malloc(size);
 		if (buff == NULL)
 		{
 			//バッファ確保失敗
@@ -33,7 +34,7 @@ static void DEBUG(LPCTSTR format, ...)
 		else
 		{
 			//バッファ確保成功
-			int ret = _vstprintf(buff, sz, format, args);
+			int ret = _vstprintf_s(buff, len, format, args);
 			if (ret < 0)
 			{
 				//文字列化失敗
@@ -71,25 +72,80 @@ enum
 {
 	VID_APPLE = 0x05AC,
 };
-const static WORD PID_APPLE_KEYBOARD[] =
+//2019.07.15:SUGIHARA:CHANGE >>>>>
+//const static WORD PID_APPLE_KEYBOARD[] =
+//{
+//	0x022C, /* Apple Wireless Keyboard US  2007 */
+//	0x022E, /* Apple Wireless Keyboard JIS 2007 */
+//	0x0239, /* Apple Wireless Keyboard US  2009 */
+//	0x023B, /* Apple Wireless Keyboard JIS 2009 */
+//	0x0255, /* Apple Wireless Keyboard US  2011 */
+//	0x0257, /* Apple Wireless Keyboard JIS 2011 */
+//	0x0265, /* Apple Magic Keyboard US  2015    */
+//	0x0267, /* Apple Magic Keyboard JIS 2015    */
+//	//2019.07.15:SUGIHARA:ADD >>>>>
+//	0x026C, /* Apple Magic Keyboard US  2018    */
+//	//2019.07.15:SUGIHARA:ADD <<<<<
+//};
+//----------
+//akbcf.exeに引数で渡すので文字列でレイアウトを定義
+typedef struct {
+	WORD PID;
+	LPCTSTR Name;
+	LPCTSTR KeyBoardType;
+	LPCTSTR KeyBoardLang;
+	LPCTSTR KeyBoardSize;
+} KEYBOARD_LAYOUT;
+const static KEYBOARD_LAYOUT PID_APPLE_KEYBOARD[] =
 {
-	0x022C, /* Apple Wireless Keyboard US  2007 */
-	0x022E, /* Apple Wireless Keyboard JIS 2007 */
-	0x0239, /* Apple Wireless Keyboard US  2009 */
-	0x023B, /* Apple Wireless Keyboard JIS 2009 */
-	0x0255, /* Apple Wireless Keyboard US  2011 */
-	0x0257, /* Apple Wireless Keyboard JIS 2011 */
-	0x0265, /* Apple Magic Keyboard US  2015    */
-	0x0267, /* Apple Magic Keyboard JIS 2015    */
+	{ 0x022C, _T("Apple Wireless Keyboard US 2007"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_US, LAYOUT_SIZE_FULL },
+	{ 0x022E, _T("Apple Wireless Keyboard JIS 2007"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_JP, LAYOUT_SIZE_FULL },
+	{ 0x0239, _T("Apple Wireless Keyboard US 2009"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_US, LAYOUT_SIZE_FULL },
+	{ 0x023B, _T("Apple Wireless Keyboard JIS 2009"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_JP, LAYOUT_SIZE_FULL },
+	{ 0x0255, _T("Apple Wireless Keyboard US  2011"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_US, LAYOUT_SIZE_FULL },
+	{ 0x0257, _T("Apple Wireless Keyboard JIS 2011"), LAYOUT_TYPE_WIRELESS, LAYOUT_LANG_JP, LAYOUT_SIZE_FULL },
+	{ 0x0265, _T("Apple Magic Keyboard US  2015"), LAYOUT_TYPE_MAGIC, LAYOUT_LANG_US, LAYOUT_SIZE_FULL },
+	{ 0x0267, _T("Apple Magic Keyboard JIS 2015"), LAYOUT_TYPE_MAGIC, LAYOUT_LANG_JP, LAYOUT_SIZE_FULL },
+	{ 0x026C, _T("Apple Magic Keyboard US  2018 No Numpad"), LAYOUT_TYPE_MAGIC, LAYOUT_LANG_US, LAYOUT_SIZE_MINI },
+	{ 0x0279, _T("Mac Book 12 2017 US"), LAYOUT_TYPE_BOOTCAMP, LAYOUT_LANG_US, LAYOUT_SIZE_MINI },
+};
+//2019.07.15:SUGIHARA:CHANGE <<<<<
+//2019.07.16:SUGIHARA:MOVE >>>>>
+static struct Status
+{
+	BOOL Fn;
 	//2019.07.15:SUGIHARA:ADD >>>>>
-	0x026C, /* Apple Magic Keyboard US  2018    */
+	BOOL IsBootCamp;
+	const KEYBOARD_LAYOUT* Layout;
 	//2019.07.15:SUGIHARA:ADD <<<<<
-};
+
+} Status;
+//2019.07.16:SUGIHARA:MOVE <<<<<
+
 //2019.07.15:SUGIHARA:ADD >>>>>
-const static WORD PID_BOOTCAMP_KEYBOARD[] =
+static BOOL IsBootCamp()
 {
-	0x0279, /* Mac Book 12 2017s                 */
-};
+	const KEYBOARD_LAYOUT* pLayout = Status.Layout;
+	if (pLayout == NULL)
+	{
+		//レイアウト不明の場合はBOOTCAMPではないにする
+		return FALSE;
+	}
+	LPCTSTR pType = pLayout->KeyBoardType;
+	if (pType == NULL)
+	{
+		//タイプ不明の場合もBOOTCAMPではないにする
+		return FALSE;
+	}
+	int nComp = _tcscmp(pType, LAYOUT_TYPE_BOOTCAMP);
+	if (nComp != 0)
+	{
+		//BOOTCAMP以外の場合
+		return FALSE;
+	}
+	//ここまで来たらBOOTCAMP環境
+	return TRUE;
+}
 //2019.07.15:SUGIHARA:ADD <<<<<
 
 static BOOL IsSupportedDevice(WORD vid, WORD pid)
@@ -116,24 +172,13 @@ static BOOL IsSupportedDevice(WORD vid, WORD pid)
 		UINT m = ARRAYSIZE(PID_APPLE_KEYBOARD);
 		for (i = 0; i < m; i++)
 		{
-			if (pid == PID_APPLE_KEYBOARD[i])
+			const KEYBOARD_LAYOUT* pLayout = &PID_APPLE_KEYBOARD[i];
+			if (pid == pLayout->PID)
 			{
-				//非Boot Camp環境
-				Status.BootCampEnvironment = FALSE;
-				return TRUE;
-			}
-		}
-	}
-	//Boot Camp Keyboard
-	{
-		UINT i;
-		UINT m = ARRAYSIZE(PID_BOOTCAMP_KEYBOARD);
-		for (i = 0; i < m; i++)
-		{
-			if (pid == PID_BOOTCAMP_KEYBOARD[i])
-			{
-				//Boot Camp環境
-				Status.BootCampEnvironment = TRUE;
+				//レイアウト保存
+				Status.Layout = pLayout;
+				Status.IsBootCamp = IsBootCamp();
+				DEBUG(_T("Layout=%s\n"), pLayout->Name);
 				return TRUE;
 			}
 		}
@@ -325,10 +370,17 @@ void Alpha(int delta)
 	}
 }
 
-void Exec(LPCTSTR cmd)
+//2019.07.16:SUGIHARA:CHANGE >>>>>
+//void Exec(LPCTSTR cmd)
+//{
+//	ShellExecute(NULL, NULL, cmd, NULL, NULL, SW_SHOWNORMAL);
+//}
+//----------
+void Exec(LPCTSTR cmd, LPCTSTR lpParameters)
 {
-	ShellExecute(NULL, NULL, cmd, NULL, NULL, SW_SHOWNORMAL);
+	ShellExecute(NULL, NULL, cmd, lpParameters, NULL, SW_SHOWNORMAL);
 }
+//2019.07.16:SUGIHARA:CHANGE <<<<<
 
 
 static struct Config config;
@@ -392,14 +444,49 @@ static void Config_Load(void)
 	CloseHandle(hFile);
 }
 
-static struct Status
+//2019.07.16:SUGIHARA:MOVE >>>>>
+//static struct Status
+//{
+//	BOOL Fn;
+//	//2019.07.15:SUGIHARA:ADD >>>>>
+//	BOOL IsBootCamp;
+//	KEYBOARD_LAYOUT* Layout;
+//	//2019.07.15:SUGIHARA:ADD <<<<<
+//
+//} Status;
+//2019.07.16:SUGIHARA:MOVE <<<<<
+//2019.07.15:SUGIHARA:ADD >>>>>
+static LPTSTR GetAkbcfParameter()
 {
-	BOOL Fn;
-	//2019.07.15:SUGIHARA:ADD >>>>>
-	BOOL BootCampEnvironment;
-	//2019.07.15:SUGIHARA:ADD <<<<<
+	const KEYBOARD_LAYOUT* pLayout = Status.Layout;
+	if (pLayout == NULL)
+	{
+		//レイアウト無効の場合はパラメータ無し
+		DEBUG(_T("Param-No Layout\n"));
+		return NULL;
+	}
+	LPCTSTR format = _T("%s-%s-%s \"%s\"");
+	int n = _sctprintf(format, pLayout->KeyBoardType, pLayout->KeyBoardLang, pLayout->KeyBoardSize, pLayout->Name);
+	if (n <= 0)
+	{
+		//フォーマットできない場合はパラメータ無し
+		DEBUG(_T("Param-No Param Size\n"));
+		return NULL;
+	}
+	int len = n + 1;
+	int size = sizeof(TCHAR) * len;
+	TCHAR* buff = (TCHAR*)malloc(size);
+	if (buff == NULL)
+	{
+		//バッファ確保失敗
+		DEBUG(_T("Param-Malloc Failed\n"));
+		return NULL;
+	}
+	_stprintf_s(buff, len, format, pLayout->KeyBoardType, pLayout->KeyBoardLang, pLayout->KeyBoardSize, pLayout->Name);
+	return buff;
+}
+//2019.07.15:SUGIHARA:ADD <<<<<
 
-} Status;
 static void Status_Initialize(void)
 {
 	ZeroMemory(&Status, sizeof Status);
@@ -452,7 +539,13 @@ static UINT Fire(UINT what)
 		break;
 	default:
 		if (FIRE_CMD_0 <= what && what < FIRE_CMD_0 + ARRAYSIZE(config_szCmds))
-			Exec(config_szCmds[what - FIRE_CMD_0]);
+		{
+			//2019.07.16:SUGIHARA:CHANGE >>>>>
+			//Exec(config_szCmds[what - FIRE_CMD_0]);
+			//----------
+			Exec(config_szCmds[what - FIRE_CMD_0], NULL);
+			//2019.07.16:SUGIHARA:CHANGE <<<<<
+		}
 		else
 			SendKey(what);
 	}
@@ -493,23 +586,31 @@ static UINT OnKeyDown(DWORD vkCode)
 	//2019.07.15:SUGIHARA:ADD >>>>>
 	else
 	{
-		switch (vkCode) {
-		case VK_PAUSE:
-			//MAC BOOK 12 (Fn + ESC on BootCamp)
-			if (Status.BootCampEnvironment)
-			{
-				return Fire(config.Fn.Esc);
-			}
-			break;
-		case VK_DELETE:
-			//MAC BOOK 12 (Fn + DELETE on BootCamp)
-			if (Status.BootCampEnvironment)
-			{
+		BOOL bBootCamp = Status.IsBootCamp;
+		if (bBootCamp)
+		{
+			switch (vkCode) {
+			case VK_DELETE:
+				//Fn + BackSpace = DELETE
 				return Fire(config.Fn.Del);
+			case VK_PRIOR:
+				//Fn + UP = PageUp
+				return Fire(config.Fn.Up);
+			case VK_NEXT:
+				//Fn + DOWN = PageDown
+				return Fire(config.Fn.Down);
+			case VK_HOME:
+				//Fn + LEFT = HOME
+				return Fire(config.Fn.Left);
+			case VK_END:
+				//Fn + RIGHT = END
+				return Fire(config.Fn.Right);
+			case VK_PAUSE:
+				//Fn + ESC = PAUSE
+				return Fire(config.Fn.Esc);
+			default:
+				break;
 			}
-			break;
-		default:
-			break;
 		}
 	}
 	//2019.07.15:SUGIHARA:ADD <<<<<
@@ -720,7 +821,7 @@ static DWORD CALLBACK SpecialKey_Thread(LPVOID lpParam)
 			if (WaitForMultipleObjects(ARRAYSIZE(evts), evts, FALSE, INFINITE) != WAIT_OBJECT_0)
 				break;
 		}
-
+		DEBUG(_T("SP-KEY=[0]%d, [1]%d\n"), SpecialKey.buffer[0], SpecialKey.buffer[1]);
 		switch (SpecialKey.buffer[0]) {
 		case 0x11:
 			OnSpecial(SpecialKey.buffer[1]);
@@ -791,8 +892,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				TCHAR cmd[MAX_PATH];
 				GetModuleFileName(NULL, cmd, ARRAYSIZE(cmd));
 				lstrcpy(cmd + lstrlen(cmd) - 4, TEXT("cf"));
-				Exec(cmd);
-			}
+				//2019.07.16:SUGIHARA:CHANGE >>>>>
+				{
+					LPTSTR szParam = GetAkbcfParameter();
+					DEBUG(_T("ExecParam='%s'\n"), szParam);
+					Exec(cmd, szParam);
+					if (szParam != NULL)
+					{
+						free(szParam);
+					}
+				}
+				//2019.07.16:SUGIHARA:CHANGE <<<<<
+		}
 			break;
 		case ID_QUIT:
 			DestroyWindow(hWnd);

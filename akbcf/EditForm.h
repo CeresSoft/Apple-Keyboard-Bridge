@@ -100,6 +100,8 @@ namespace akbcf
 		System::Windows::Forms::OpenFileDialog^ FileDlg;
 	private: System::Windows::Forms::RadioButton^  Esc;
 	private: System::Windows::Forms::RadioButton^  FnEsc;
+	private: System::Windows::Forms::Label^  label1;
+	private: System::Windows::Forms::Label^  label2;
 
 	private:
 		/// <summary>
@@ -173,6 +175,8 @@ namespace akbcf
 			this->Cancel = (gcnew System::Windows::Forms::Button());
 			this->Apply = (gcnew System::Windows::Forms::Button());
 			this->FileDlg = (gcnew System::Windows::Forms::OpenFileDialog());
+			this->label1 = (gcnew System::Windows::Forms::Label());
+			this->label2 = (gcnew System::Windows::Forms::Label());
 			this->Tab->SuspendLayout();
 			this->Singles->SuspendLayout();
 			this->Combinations->SuspendLayout();
@@ -195,6 +199,7 @@ namespace akbcf
 			// 
 			// Singles
 			// 
+			this->Singles->Controls->Add(this->label1);
 			this->Singles->Controls->Add(this->Esc);
 			this->Singles->Controls->Add(this->F1);
 			this->Singles->Controls->Add(this->F2);
@@ -532,6 +537,7 @@ namespace akbcf
 			// 
 			// Combinations
 			// 
+			this->Combinations->Controls->Add(this->label2);
 			this->Combinations->Controls->Add(this->FnEsc);
 			this->Combinations->Controls->Add(this->FnF1);
 			this->Combinations->Controls->Add(this->FnF2);
@@ -977,6 +983,30 @@ namespace akbcf
 			// 
 			this->FileDlg->AddExtension = false;
 			// 
+			// label1
+			// 
+			this->label1->AutoSize = true;
+			this->label1->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(128)));
+			this->label1->ForeColor = System::Drawing::SystemColors::ControlDark;
+			this->label1->Location = System::Drawing::Point(96, 46);
+			this->label1->Name = L"label1";
+			this->label1->Size = System::Drawing::Size(60, 21);
+			this->label1->TabIndex = 23;
+			this->label1->Text = L"label1";
+			// 
+			// label2
+			// 
+			this->label2->AutoSize = true;
+			this->label2->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(128)));
+			this->label2->ForeColor = System::Drawing::SystemColors::ControlDark;
+			this->label2->Location = System::Drawing::Point(96, 46);
+			this->label2->Name = L"label2";
+			this->label2->Size = System::Drawing::Size(60, 21);
+			this->label2->TabIndex = 24;
+			this->label2->Text = L"label2";
+			// 
 			// EditForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 12);
@@ -998,7 +1028,9 @@ namespace akbcf
 			this->Load += gcnew System::EventHandler(this, &EditForm::EditForm_Load);
 			this->Tab->ResumeLayout(false);
 			this->Singles->ResumeLayout(false);
+			this->Singles->PerformLayout();
 			this->Combinations->ResumeLayout(false);
+			this->Combinations->PerformLayout();
 			this->Action->ResumeLayout(false);
 			this->Action->PerformLayout();
 			this->ResumeLayout(false);
@@ -1030,6 +1062,9 @@ namespace akbcf
 		Config^                 ConfigData;
 		array<System::String^>^ ConfigCmds;
 		System::Boolean         IsSuspended;
+		//2019.07.15:SUGIHARA:ADD >>>>>
+		System::String^         KeyboardLayout;
+		//2019.07.15:SUGIHARA:ADD <<<<<
 
 	private:
 		System::Collections::Generic::Dictionary<WORD, System::String^>^ InputKeys;

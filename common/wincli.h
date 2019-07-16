@@ -29,6 +29,10 @@ enum
 {
 	VK_BACK       = 0x08, // Back Space
 
+	//2019.07.15:SUGIHARA:ADD >>>>>
+	VK_PAUSE      = 0x13, // PAUSE
+	//2019.07.15:SUGIHARA:ADD <<<<<
+
 	VK_KANJI      = 0x19,
 	VK_CONVERT    = 0x1C,
 	VK_NONCONVERT = 0x1D,
