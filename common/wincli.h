@@ -31,6 +31,7 @@ enum
 
 	//2019.07.15:SUGIHARA:ADD >>>>>
 	VK_PAUSE      = 0x13, // PAUSE
+	VK_CAPITAL    = 0x14, // Caps Lock
 	//2019.07.15:SUGIHARA:ADD <<<<<
 
 	VK_KANJI      = 0x19,
@@ -45,6 +46,11 @@ enum
 	VK_SNAPSHOT   = 0x2C, // Print Screen
 	VK_INSERT     = 0x2D,
 	VK_DELETE     = 0x2E,
+
+	//2019.07.20:SUGIHARA:ADD >>>>>
+	VK_LWIN       = 0x5B, //Left Windows Key
+	VK_RWIN       = 0x5C, //Right Windows Key
+	//2019.07.20:SUGIHARA:ADD <<<<<
 
 	VK_F1         = 0x70,
 	VK_F2         = 0x71,

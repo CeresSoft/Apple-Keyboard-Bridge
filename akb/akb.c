@@ -6,7 +6,11 @@
 
 #include "resource.h"
 
- 
+ //2019.07.15:SUGIHARA:ADD >>>>>
+static CRITICAL_SECTION _DebugCriticalSection;
+static HANDLE _DebugFileHandle = INVALID_HANDLE_VALUE;
+//2019.07.15:SUGIHARA:ADD <<<<<
+
 //2019.07.15:SUGIHARA:ADD >>>>>
 static void DEBUG(LPCTSTR format, ...)
 {
@@ -14,7 +18,7 @@ static void DEBUG(LPCTSTR format, ...)
 	va_list args;
 	va_start(args, format);
 
-	int n  = _vsctprintf(format, args);
+	int n = _vsctprintf(format, args);
 	if (n <= 0)
 	{
 		//出力文字列なし
@@ -35,7 +39,7 @@ static void DEBUG(LPCTSTR format, ...)
 		{
 			//バッファ確保成功
 			int ret = _vstprintf_s(buff, len, format, args);
-			if (ret < 0)
+			if (ret <= 0)
 			{
 				//文字列化失敗
 				//何もしない(freeするためreturnしてはいけない)
@@ -44,6 +48,17 @@ static void DEBUG(LPCTSTR format, ...)
 			{
 				//文字列化成功
 				OutputDebugString(buff);
+				//ファイルに出力
+				EnterCriticalSection(&_DebugCriticalSection);
+				HANDLE handle = _DebugFileHandle;
+				if (handle != INVALID_HANDLE_VALUE)
+				{
+					//最後のNUL文字を書き宇出さないようにバイト数を調整
+					DWORD writeByte = _tcslen(buff) * sizeof(TCHAR);
+					DWORD wroteByte = 0;
+					WriteFile(handle, buff, writeByte, &wroteByte, NULL);
+				}
+				LeaveCriticalSection(&_DebugCriticalSection);
 			}
 
 			//バッファ開放
@@ -148,7 +163,7 @@ static BOOL IsBootCamp()
 }
 //2019.07.15:SUGIHARA:ADD <<<<<
 
-static BOOL IsSupportedDevice(WORD vid, WORD pid)
+static BOOL IsSupportedDevice(LPCTSTR path, WORD vid, WORD pid, WORD version)
 {
 	//2019.07.15:SUGIHARA:ADD >>>>>
 	//if (vid == VID_APPLE) {
@@ -160,12 +175,15 @@ static BOOL IsSupportedDevice(WORD vid, WORD pid)
 	//}
 	//return FALSE;
 	//----------
+	DEBUG(_T("Layout path='%s', vid=%x pid=%x, version=%x\n"), path, vid, pid, version);
+
 	//Apple Vender ID判定
 	if (vid != VID_APPLE)
 	{
 		//異なる場合は終了
 		return FALSE;
 	}
+
 	//Apple Keyboard
 	{
 		UINT i;
@@ -392,6 +410,11 @@ static void Config_Initialize(void)
 	config.Key.Eject = CONFIG_INIT_KEY_EJECT;
 	config.Key.Alnum = CONFIG_INIT_KEY_ALNUM;
 	config.Key.Kana  = CONFIG_INIT_KEY_KANA;
+	//2019.07.20:SUGIHARA:ADD >>>>>
+	config.Key.LWin = CONFIG_INIT_KEY_LWIN;
+	config.Key.RWin = CONFIG_INIT_KEY_RWIN;
+	config.Key.CAPS = CONFIG_INIT_KEY_CAPS;
+	//2019.07.20:SUGIHARA:ADD <<<<<
 	/* Fn combination keys */
 	config.Fn.F1     = CONFIG_INIT_FN_F1;
 	config.Fn.F2     = CONFIG_INIT_FN_F2;
@@ -513,33 +536,43 @@ static UINT Fire(UINT what)
 {
 	switch (what) {
 	case 0:
+		DEBUG(_T("Fire 0\n"));
 		return FALL_THROUGH;
 	case FIRE_NOTHING:
+		DEBUG(_T("Fire Nothing\n"));
 		break;
 	case FIRE_POWER:
+		DEBUG(_T("Fire Power\n"));
 		Power();
 		break;
 	case FIRE_EJECT:
+		DEBUG(_T("Fire Eject\n"));
 		Eject();
 		break;
 	case FIRE_FLIP3D:
+		DEBUG(_T("Fire Flip3D\n"));
 		Flip3D();
 		break;
 	case FIRE_BRIGHT_DN:
+		DEBUG(_T("Fire Bright Down\n"));
 		Bright(-BRIGHT_STEP);
 		break;
 	case FIRE_BRIGHT_UP:
+		DEBUG(_T("Fire Bright Up\n"));
 		Bright(+BRIGHT_STEP);
 		break;
 	case FIRE_ALPHA_DN:
+		DEBUG(_T("Fire Alpha Down\n"));
 		Alpha(-ALPHA_DELTA);
 		break;
 	case FIRE_ALPHA_UP:
+		DEBUG(_T("Fire Alpha Up\n"));
 		Alpha(+ALPHA_DELTA);
 		break;
 	default:
 		if (FIRE_CMD_0 <= what && what < FIRE_CMD_0 + ARRAYSIZE(config_szCmds))
 		{
+			DEBUG(_T("Fire Command '%s'\n"), config_szCmds[what - FIRE_CMD_0]);
 			//2019.07.16:SUGIHARA:CHANGE >>>>>
 			//Exec(config_szCmds[what - FIRE_CMD_0]);
 			//----------
@@ -547,7 +580,10 @@ static UINT Fire(UINT what)
 			//2019.07.16:SUGIHARA:CHANGE <<<<<
 		}
 		else
+		{
+			DEBUG(_T("Fire Key 0x%02X\n"), what);
 			SendKey(what);
+		}
 	}
 	return FIRED;
 }
@@ -587,30 +623,60 @@ static UINT OnKeyDown(DWORD vkCode)
 	else
 	{
 		BOOL bBootCamp = Status.IsBootCamp;
-		if (bBootCamp)
-		{
-			switch (vkCode) {
-			case VK_DELETE:
-				//Fn + BackSpace = DELETE
+		switch (vkCode) {
+		case VK_DELETE:
+			if (bBootCamp)
+			{
+				//Fn + BackSpace(Macの場合はDELETEキー) = DELETE
+				DEBUG(_T("detected - Fn + BackSpace\n"));
 				return Fire(config.Fn.Del);
-			case VK_PRIOR:
-				//Fn + UP = PageUp
-				return Fire(config.Fn.Up);
-			case VK_NEXT:
-				//Fn + DOWN = PageDown
-				return Fire(config.Fn.Down);
-			case VK_HOME:
-				//Fn + LEFT = HOME
-				return Fire(config.Fn.Left);
-			case VK_END:
-				//Fn + RIGHT = END
-				return Fire(config.Fn.Right);
-			case VK_PAUSE:
-				//Fn + ESC = PAUSE
-				return Fire(config.Fn.Esc);
-			default:
-				break;
 			}
+		case VK_PRIOR:
+			if (bBootCamp)
+			{
+				//Fn + UP = PageUp
+				DEBUG(_T("detected - Fn + Up\n"));
+				return Fire(config.Fn.Up);
+			}
+		case VK_NEXT:
+			if (bBootCamp)
+			{
+				//Fn + DOWN = PageDown
+				DEBUG(_T("detected - Fn + Down\n"));
+				return Fire(config.Fn.Down);
+			}
+		case VK_HOME:
+			if (bBootCamp)
+			{
+				//Fn + LEFT = HOME
+				DEBUG(_T("detected - Fn + Left\n"));
+				return Fire(config.Fn.Left);
+			}
+		case VK_END:
+			if (bBootCamp)
+			{
+				//Fn + RIGHT = END
+				DEBUG(_T("detected - Fn + Right\n"));
+				return Fire(config.Fn.Right);
+			}
+		case VK_PAUSE:
+			if (bBootCamp)
+			{
+				//Fn + ESC = PAUSE
+				DEBUG(_T("detected - Fn + ESC\n"));
+				return Fire(config.Fn.Esc);
+			}
+		case VK_LWIN:
+			DEBUG(_T("detected - VK_LWIN\n"));
+			return Fire(config.Key.LWin);
+		case VK_RWIN:
+			DEBUG(_T("detected - VK_RWIN\n"));
+			return Fire(config.Key.RWin);
+		case VK_CAPITAL:
+			DEBUG(_T("detected - VK_CAPITAL\n"));
+			return Fire(config.Key.CAPS);
+		default:
+			break;
 		}
 	}
 	//2019.07.15:SUGIHARA:ADD <<<<<
@@ -701,6 +767,7 @@ static struct SpecialKey
 	BYTE       buffer[22];
 	OVERLAPPED overlapped;
 } SpecialKey;
+
 static void SpecialKey_Initialize(void)
 {
 	SpecialKey.hDevice = INVALID_HANDLE_VALUE;
@@ -708,81 +775,181 @@ static void SpecialKey_Initialize(void)
 	SpecialKey.evTerm  = NULL;
 	SpecialKey.evDone  = NULL;
 }
+
 static BOOL SpecialKey_Prepare(void)
 {
-	GUID guid;
-	HDEVINFO hDevInfo;
-	SP_DEVICE_INTERFACE_DATA diData;
-	DWORD index;
-
+	//スペシャルキーデバイス有効判定
 	if (SpecialKey.hDevice != INVALID_HANDLE_VALUE)
+	{
+		//有効の場合は何もしないで終了
+		DEBUG(_T("SpecialKey.hDevic Enabled\n"));
 		return TRUE;
+	}
 
+	//HIDのGUIDを取得
+	GUID guid;
+	DEBUG(_T("Get HID Guid\n"));
 	WinAPI.HID.GetHidGuid(&guid);
+
+	//デバイス情報を取得
+	HDEVINFO hDevInfo;
+	DEBUG(_T("Get HID Device Info\n"));
 	hDevInfo = WinAPI.Setup.GetClassDevs(&guid, NULL, NULL, DIGCF_DEVICEINTERFACE);
 	if (!hDevInfo)
-		return FALSE;
-	diData.cbSize = sizeof diData;
-	for (index = 0;
-	     WinAPI.Setup.EnumDeviceInterfaces(hDevInfo, NULL, &guid, index, &diData);
-	     index++)
 	{
-		BYTE diDetailImpl[sizeof(DWORD) + sizeof(TCHAR) * MAX_PATH];
-		PSP_DEVICE_INTERFACE_DETAIL_DATA pdiDetail;
-		DWORD sizeDetail;
-		
-		pdiDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)diDetailImpl;
+		//デバイス情報が取得できなかった場合は失敗で終了
+		DEBUG(_T("Failed Get HID Device Info\n"));
+		return FALSE;
+	}
+
+	//デバイスインターフェイス情報取得
+	DWORD index = 0;
+	SP_DEVICE_INTERFACE_DATA diData;
+	ZeroMemory(&diData, sizeof(diData));
+	diData.cbSize = sizeof(diData);
+	DEBUG(_T("Device Info Enum Start. (index=%d)\n"), index);
+	BOOL bLoop = WinAPI.Setup.EnumDeviceInterfaces(hDevInfo, NULL, &guid, index, &diData);
+	while(bLoop)
+	{
+		//デバイス詳細取得領域初期化
+		BYTE diDetailBuffer[sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA) + (sizeof(TCHAR) * MAX_PATH)];//malloc()の代わり。こうすればfree()しなくて済む
+		PSP_DEVICE_INTERFACE_DETAIL_DATA pdiDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)diDetailBuffer;
+		ZeroMemory(pdiDetail, sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA));
+		//pdiDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)diDetailImpl;
 		pdiDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
-		if (WinAPI.Setup.GetDeviceInterfaceDetail(hDevInfo,
-		    &diData, pdiDetail, sizeof diDetailImpl, &sizeDetail, NULL))
+
+		//デバイス詳細取得
+		DWORD sizeDetail;
+		DEBUG(_T("- Get Device Detail (index=%d)\n"), index);
+		BOOL bDetail = WinAPI.Setup.GetDeviceInterfaceDetail(hDevInfo,
+			&diData, pdiDetail, sizeof(diDetailBuffer), &sizeDetail, NULL);
+		if (bDetail)
 		{
-			HIDD_ATTRIBUTES attr;
+			//デバイス詳細が取得できた場合
+			DEBUG(_T("- Success Get Device Detail (index=%d, Path='%s')\n"), index, pdiDetail->DevicePath);
+
+			//非同期読込でデバイスをオープン(書込はしてないので削除した)
 			HANDLE hDevice = CreateFile(pdiDetail->DevicePath,
-				GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+				GENERIC_READ /*| GENERIC_WRITE*/, FILE_SHARE_READ | FILE_SHARE_WRITE,
 				NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 			if (hDevice == INVALID_HANDLE_VALUE)
-				continue;
-			attr.Size = sizeof attr;
-			if (WinAPI.HID.GetAttributes(hDevice, &attr) &&
-			    IsSupportedDevice(attr.VenderID, attr.ProductID))
 			{
-				/* use last one */
-				if (SpecialKey.hDevice != INVALID_HANDLE_VALUE)
-					CloseHandle(SpecialKey.hDevice);
-				SpecialKey.hDevice = hDevice;
+				//オープンできなかった場合は次のデバイスに進む
+				DEBUG(_T("-- Device Not Open. (Path='%s')\n"), pdiDetail->DevicePath);
 			}
-			if (hDevice != SpecialKey.hDevice)
-				CloseHandle(hDevice);
+			else
+			{
+				//オープンできた場合
+				DEBUG(_T("-- Device Opened. (Path='%s')\n"), pdiDetail->DevicePath);
+
+				//デバイスの属性を取得
+				HIDD_ATTRIBUTES attr;
+				ZeroMemory(&attr, sizeof(attr));
+				attr.Size = sizeof(attr);
+				BOOL bAttr = WinAPI.HID.GetAttributes(hDevice, &attr);
+				if (bAttr)
+				{
+					DEBUG(_T("--- Device Attr Success. (Path='%s')\n"), pdiDetail->DevicePath);
+					BOOL bSupport = IsSupportedDevice(pdiDetail->DevicePath, attr.VenderID, attr.ProductID, attr.VersionNumber);
+					if (bSupport)
+					{
+						DEBUG(_T("---- Support Device. (Path='%s')\n"), pdiDetail->DevicePath);
+						//既にデバイスが存在する場合は最後のデバイスを使うので開放する
+						if (SpecialKey.hDevice != INVALID_HANDLE_VALUE)
+						{
+							CloseHandle(SpecialKey.hDevice);
+						}
+						SpecialKey.hDevice = hDevice;
+					}
+					else
+					{
+						DEBUG(_T("---- Not Support Device. (Path='%s')\n"), pdiDetail->DevicePath);
+					}
+				}
+				else
+				{
+					DEBUG(_T("--- Device Attr Failed. (Path='%s')\n"), pdiDetail->DevicePath);
+				}
+				//サポートデバイス以外の場合
+				if (hDevice != SpecialKey.hDevice)
+				{
+					//デバイスをクローズする
+					DEBUG(_T("-- No Support Device Closed. (Path='%s')\n"), pdiDetail->DevicePath);
+					CloseHandle(hDevice);
+				}
+			}
 		}
+		else
+		{
+			DEBUG(_T("- Failed Get Device Detail (index=%d)\n"), index);
+		}
+		//次のデバイスを取得する
+		index += 1;
+		ZeroMemory(&diData, sizeof(diData));
+		diData.cbSize = sizeof(diData);
+		DEBUG(_T("Device Info Enum Next. (index=%d)\n"), index);
+		bLoop = WinAPI.Setup.EnumDeviceInterfaces(hDevInfo, NULL, &guid, index, &diData);
 	}
+	//デバイス情報を使い終わったのでクローズ
+	DEBUG(_T("Device Info Destroy\n"));
 	WinAPI.Setup.DestroyDeviceInfoList(hDevInfo);
 
-	if (SpecialKey.hThread != NULL)
-		return TRUE;
-	if (SpecialKey.hDevice != INVALID_HANDLE_VALUE) {
-		if ((SpecialKey.evTerm = CreateEvent(NULL, TRUE, FALSE, NULL)) != NULL &&
-		    (SpecialKey.evDone = CreateEvent(NULL, TRUE, FALSE, NULL)) != NULL)
+	//デバイスが有効か判定
+	if (SpecialKey.hDevice != INVALID_HANDLE_VALUE)
+	{
+		DEBUG(_T("SpecialKey.hDevice Enabled\n"));
+		//スレッド起動判定
+		if (SpecialKey.hThread != NULL)
 		{
-			SpecialKey.hThread = CreateThread(NULL, 0, SpecialKey_Thread, NULL, 0, NULL);
-			if (SpecialKey.hThread != NULL)
-				return TRUE;
+			//スレッドが起動している(=スレッドから呼び出されている)ので成功で終了
+			DEBUG(_T("SpecialKey.Thread Runnning\n"));
+			return TRUE;
 		}
-		CloseHandle(SpecialKey.evTerm);
-		CloseHandle(SpecialKey.evDone);
+
+		//スレッド起動
+		SpecialKey.evTerm = CreateEvent(NULL, TRUE, FALSE, NULL);
+		if (SpecialKey.evTerm != NULL)
+		{
+			SpecialKey.evDone = CreateEvent(NULL, TRUE, FALSE, NULL);
+			if (SpecialKey.evDone != NULL)
+			{
+				DEBUG(_T("SpecialKey.Thread Create\n"));
+				SpecialKey.hThread = CreateThread(NULL, 0, SpecialKey_Thread, NULL, 0, NULL);
+				if (SpecialKey.hThread != NULL)
+				{
+					//スレッド起動成功
+					DEBUG(_T("Success SpecialKey.Thread Create\n"));
+					return TRUE;
+				}
+				CloseHandle(SpecialKey.evDone);
+			}
+			CloseHandle(SpecialKey.evTerm);
+		}
 		CloseHandle(SpecialKey.hDevice);
+
+		//スレッドの情報を初期化
 		SpecialKey_Initialize();
 	}
+
+	//ここまで来たら失敗で終了
 	return FALSE;
 }
 static void SpecialKey_Cleanup(void)
 {
-	if (SpecialKey.hThread) {
+	//スレッド起動中判定
+	if (SpecialKey.hThread)
+	{
+		DEBUG(_T("Thread Stop Signal\n"));
 		SetEvent(SpecialKey.evTerm);
+		DEBUG(_T("Thread Stop Wait\n"));
 		WaitForSingleObject(SpecialKey.evDone, INFINITE);
+		DEBUG(_T("Thread Stopped\n"));
 		CloseHandle(SpecialKey.evTerm);
 		CloseHandle(SpecialKey.evDone);
 		CloseHandle(SpecialKey.hThread);
 	}
+
+	//スレッドの情報を初期化
 	SpecialKey_Initialize();
 
 	/* reset special key status */
@@ -790,6 +957,7 @@ static void SpecialKey_Cleanup(void)
 }
 static DWORD CALLBACK SpecialKey_Thread(LPVOID lpParam)
 {
+	DEBUG(_T("[SpecialKey_Thread] Start\n"));
 	HANDLE evts[2];
 
 	UNREFERENCED_PARAMETER(lpParam);
@@ -803,25 +971,38 @@ static DWORD CALLBACK SpecialKey_Thread(LPVOID lpParam)
 		DWORD r;
 		ResetEvent(SpecialKey.overlapped.hEvent);
 		SpecialKey.overlapped.Offset = SpecialKey.overlapped.OffsetHigh = 0;
+		DEBUG(_T("[SpecialKey_Thread] Read Start\n"));
 		if (!ReadFile(SpecialKey.hDevice, SpecialKey.buffer, sizeof SpecialKey.buffer,
 		              &r, &SpecialKey.overlapped))
 		{
-			if (GetLastError() != ERROR_IO_PENDING) {
+			DWORD dwError = GetLastError();
+			if (dwError != ERROR_IO_PENDING)
+			{
+				DEBUG(_T("[SpecialKey_Thread] Read ERROR (GetLastrError=%d)\n"), dwError);
 				/* disconnected */
 				CloseHandle(SpecialKey.hDevice);
 				SpecialKey.hDevice = INVALID_HANDLE_VALUE;
 				for (;;) {
+					DEBUG(_T("[SpecialKey_Thread] SpecialKey_Prepare\n"));
 					if (SpecialKey_Prepare())
+					{
 						break;
+					}
+					DEBUG(_T("[SpecialKey_Thread] WaitForSingleObject - evTerm\n"));
 					if (WaitForSingleObject(SpecialKey.evTerm, RETRY_INTERVAL) != WAIT_TIMEOUT)
+					{
 						goto term;
+					}
 				}
 				continue;
 			}
+			DEBUG(_T("[SpecialKey_Thread] Read Wait - evts\n"));
 			if (WaitForMultipleObjects(ARRAYSIZE(evts), evts, FALSE, INFINITE) != WAIT_OBJECT_0)
+			{
 				break;
+			}
 		}
-		DEBUG(_T("SP-KEY=[0]%d, [1]%d\n"), SpecialKey.buffer[0], SpecialKey.buffer[1]);
+		DEBUG(_T("[SpecialKey_Thread] Readed SP-KEY=[0]%d, [1]%d\n"), SpecialKey.buffer[0], SpecialKey.buffer[1]);
 		switch (SpecialKey.buffer[0]) {
 		case 0x11:
 			OnSpecial(SpecialKey.buffer[1]);
@@ -839,6 +1020,7 @@ term:
 	CloseHandle(SpecialKey.overlapped.hEvent);
 
 	SetEvent(SpecialKey.evDone);
+	DEBUG(_T("SpecialKey_Thread EXIT\n"));
 	return 0;
 }
 
@@ -855,9 +1037,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	case WM_APP_TRAYICON:
 		switch (lParam) {
 		case WM_RBUTTONDOWN:
+			DEBUG(_T("> WM_RBUTTONDOWN\n"));
 			SetCapture(hWnd);
 			break;
 		case WM_RBUTTONUP:
+			DEBUG(_T("> WM_RBUTTONUP\n"));
 			ReleaseCapture();
 			{
 				RECT rc;
@@ -875,19 +1059,24 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		case NIN_BALLOONHIDE:
 		case NIN_BALLOONTIMEOUT:
 		case NIN_BALLOONUSERCLICK:
+			DEBUG(_T("> NIN_BALLOONHIDE/NIN_BALLOONTIMEOUT/NIN_BALLOONUSERCLICK\n"));
 			/* error message closed */
 			DestroyWindow(hWnd);
 			break;
 		}
 		return 0;
 	case WM_APP_RELOAD:
+		DEBUG(_T("> WM_APP_RELOAD\n"));
 		{
 			Config_Load();
 		}
 		return 0;
 	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
+		DEBUG(_T("> WM_COMMAND\n"));
+		switch (LOWORD(wParam))
+		{
 		case ID_CONF:
+			DEBUG(_T("> WM_COMMAND - ID_CONF\n"));
 			{
 				TCHAR cmd[MAX_PATH];
 				GetModuleFileName(NULL, cmd, ARRAYSIZE(cmd));
@@ -903,14 +1092,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 					}
 				}
 				//2019.07.16:SUGIHARA:CHANGE <<<<<
-		}
+			}
 			break;
 		case ID_QUIT:
+			DEBUG(_T("> WM_COMMAND - ID_EXIT\n"));
 			DestroyWindow(hWnd);
 			break;
 		}
 		break;
 	case WM_CREATE:
+		DEBUG(_T("> WM_CREATE\n"));
 		{
 			HINSTANCE hInstance = ((LPCREATESTRUCT)lParam)->hInstance;
 
@@ -943,6 +1134,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		}
 		break;
 	case WM_DESTROY:
+		DEBUG(_T("> WM_DESTROY\n"));
 		{
 			SpecialKey_Cleanup();
 			UnhookWindowsHookEx(Global.hHook);
@@ -961,7 +1153,34 @@ int Main(HINSTANCE hInstance)
 	HWND       wnd;
 	MSG        msg;
 
-	if ((wnd = FindWindow(App.Class, App.Title)) != NULL) {
+	//2019.07.21:SUGIHARA:ADD >>>>>
+	{
+		TCHAR szFile[MAX_PATH];
+		DWORD r = GetModuleFileName(NULL, szFile, ARRAYSIZE(szFile));
+		lstrcpy(szFile + r, TEXT(".log"));
+
+		//デバッグログ(起動毎に初期化する)
+		_DebugFileHandle = CreateFile(szFile, GENERIC_WRITE, FILE_SHARE_READ| FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		//クリティカルセクション
+		InitializeCriticalSection(&_DebugCriticalSection);
+		//開始ログ保存
+		if (_DebugFileHandle != INVALID_HANDLE_VALUE)
+		{
+			//メモ帳でも開けるようにWCHARの場合はBOMをつける
+			if (sizeof(TCHAR) == sizeof(WCHAR))
+			{
+				BYTE buff[] = { 0xFF,0xFE };
+				DWORD writeByte = sizeof(buff);
+				DWORD wroteByte = 0;
+				WriteFile(_DebugFileHandle, buff, writeByte, &wroteByte, NULL);
+			}
+		}
+		DEBUG(_T("----- Apple-Keyboard-Bridge START -----\n"));
+	}
+	//2019.07.21:SUGIHARA:ADD <<<<<
+
+	if ((wnd = FindWindow(App.Class, App.Title)) != NULL)
+	{
 		/* reload config */
 		PostMessage(wnd, WM_APP_RELOAD, 0, 0);
 		return 0;
@@ -993,7 +1212,8 @@ int Main(HINSTANCE hInstance)
 	RegisterClassEx(&wcx);
 	CreateWindowEx(0, wcx.lpszClassName, App.Title, WS_POPUP,
 		CW_USEDEFAULT, 0, 10, 10, NULL, NULL, wcx.hInstance, NULL);
-	while (GetMessage(&msg, NULL, 0, 0)) {
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
@@ -1002,6 +1222,25 @@ int Main(HINSTANCE hInstance)
 
 	WinAPI_Uninitialize();
 	CoUninitialize();
+
+	//2019.07.21:SUGIHARA:ADD >>>>>
+	{
+		//開始ログ保存
+		DEBUG(_T("----- Apple-Keyboard-Bridge END -----\n"));
+		//デバッグログ終了
+		EnterCriticalSection(&_DebugCriticalSection);
+		HANDLE h = _DebugFileHandle;
+		if (h != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(h);
+		}
+		_DebugFileHandle = INVALID_HANDLE_VALUE;
+		LeaveCriticalSection(&_DebugCriticalSection);
+		//クリティカルセクション終了
+		DeleteCriticalSection(&_DebugCriticalSection);
+	}
+	//2019.07.21:SUGIHARA:ADD <<<<<
+
 	return (int)msg.wParam;
 }
 

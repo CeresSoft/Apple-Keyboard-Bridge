@@ -40,6 +40,11 @@ namespace akbcf
 		config->Key.Eject = CONFIG_INIT_KEY_EJECT;
 		config->Key.Alnum = CONFIG_INIT_KEY_ALNUM;
 		config->Key.Kana  = CONFIG_INIT_KEY_KANA;
+		//2019.07.20:SUGIHARA:ADD >>>>>
+		config->Key.LWin = CONFIG_INIT_KEY_LWIN;
+		config->Key.RWin = CONFIG_INIT_KEY_RWIN;
+		config->Key.CAPS = CONFIG_INIT_KEY_CAPS;
+		//2019.07.20:SUGIHARA:ADD <<<<<
 		/* Fn combination keys */
 		config->Fn.F1     = CONFIG_INIT_FN_F1;
 		config->Fn.F2     = CONFIG_INIT_FN_F2;
@@ -109,6 +114,11 @@ namespace akbcf
 		this->InputKeys[VK_MEDIA_PLAY_PAUSE ] = L"再生/一時停止";
 		this->InputKeys[VK_MEDIA_STOP       ] = L"停止";
 		this->InputKeys[VK_LAUNCH_MAIL      ] = L"メール";
+		//2019.07.20:SUGIHARA:ADD >>>>>
+		this->InputKeys[VK_LWIN             ] = L"左Windows";
+		this->InputKeys[VK_RWIN             ] = L"右Windows";
+		this->InputKeys[VK_CAPITAL          ] = L"Caps Lock";
+		//2019.07.20:SUGIHARA:ADD <<<<<
 
 		// Special key code => Special action name
 		this->Specials = gcnew Dictionary<WORD, String^>();
@@ -287,6 +297,11 @@ namespace akbcf
 			if (this->Eject->Checked  ) return this->ConfigData->Key.Eject;
 			if (this->Alnum->Checked  ) return this->ConfigData->Key.Alnum;
 			if (this->Kana->Checked   ) return this->ConfigData->Key.Kana;
+			//2019.07.20:SUGIHARA:ADD >>>>>
+			if (this->LWin->Checked) return this->ConfigData->Key.LWin;
+			if (this->RWin->Checked) return this->ConfigData->Key.RWin;
+			if (this->CAPS->Checked) return this->ConfigData->Key.CAPS;
+			//2019.07.20:SUGIHARA:ADD <<<<<
 		} else {
 			if (this->FnF1->Checked   ) return this->ConfigData->Fn.F1;
 			if (this->FnF2->Checked   ) return this->ConfigData->Fn.F2;

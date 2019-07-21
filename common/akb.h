@@ -74,11 +74,17 @@ typedef nopadding ref_struct Config
 	val_struct Key
 	{
 		WORD Power, Eject, Alnum, Kana;
+		//2019.07.20:SUGIHARA:ADD >>>>>
+		WORD LWin, RWin, CAPS;
+		//2019.07.20:SUGIHARA:ADD <<<<<
 	} Key;
 	val_struct Fn
 	{
 		WORD F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12;
-		WORD Del, Up, Down, Left, Right, Eject, Esc;
+		WORD Del, Up, Down, Left, Right, Eject;
+		//2019.07.15:SUGIHARA:ADD >>>>>
+		WORD Esc;
+		//2019.07.15:SUGIHARA:ADD <<<<<
 	} Fn;
 	/* WORD cbCmd[CONFIG_NUM_CMDS] */
 	fixed_array(WORD, cbCmds, CONFIG_NUM_CMDS);
@@ -103,6 +109,11 @@ enum
 	CONFIG_INIT_KEY_EJECT = VK_F13,
 	CONFIG_INIT_KEY_ALNUM = VK_NONCONVERT,
 	CONFIG_INIT_KEY_KANA  = VK_CONVERT,
+	//2019.07.20:SUGIHARA:ADD >>>>>
+	CONFIG_INIT_KEY_LWIN = VK_LWIN,
+	CONFIG_INIT_KEY_RWIN = VK_RWIN,
+	CONFIG_INIT_KEY_CAPS = VK_CAPITAL,
+	//2019.07.20:SUGIHARA:ADD <<<<<
 	/* Fn combination keys */
 	CONFIG_INIT_FN_F1     = FIRE_BRIGHT_DN,
 	CONFIG_INIT_FN_F2     = FIRE_BRIGHT_UP,

@@ -103,6 +103,14 @@ namespace akbcf
 	private: System::Windows::Forms::Label^  label1;
 	private: System::Windows::Forms::Label^  label2;
 
+	private: System::Windows::Forms::RadioButton^  RWin;
+	private: System::Windows::Forms::RadioButton^  LWin;
+	private: System::Windows::Forms::RadioButton^  FnCAPS;
+	private: System::Windows::Forms::RadioButton^  FnRWin;
+	private: System::Windows::Forms::RadioButton^  FnLWin;
+	private: System::Windows::Forms::RadioButton^  CAPS;
+
+
 	private:
 		/// <summary>
 		/// 必要なデザイナ変数です。
@@ -118,6 +126,10 @@ namespace akbcf
 		{
 			this->Tab = (gcnew System::Windows::Forms::TabControl());
 			this->Singles = (gcnew System::Windows::Forms::TabPage());
+			this->CAPS = (gcnew System::Windows::Forms::RadioButton());
+			this->RWin = (gcnew System::Windows::Forms::RadioButton());
+			this->LWin = (gcnew System::Windows::Forms::RadioButton());
+			this->label1 = (gcnew System::Windows::Forms::Label());
 			this->Esc = (gcnew System::Windows::Forms::RadioButton());
 			this->F1 = (gcnew System::Windows::Forms::RadioButton());
 			this->F2 = (gcnew System::Windows::Forms::RadioButton());
@@ -141,6 +153,10 @@ namespace akbcf
 			this->Down = (gcnew System::Windows::Forms::RadioButton());
 			this->Right = (gcnew System::Windows::Forms::RadioButton());
 			this->Combinations = (gcnew System::Windows::Forms::TabPage());
+			this->FnCAPS = (gcnew System::Windows::Forms::RadioButton());
+			this->FnRWin = (gcnew System::Windows::Forms::RadioButton());
+			this->FnLWin = (gcnew System::Windows::Forms::RadioButton());
+			this->label2 = (gcnew System::Windows::Forms::Label());
 			this->FnEsc = (gcnew System::Windows::Forms::RadioButton());
 			this->FnF1 = (gcnew System::Windows::Forms::RadioButton());
 			this->FnF2 = (gcnew System::Windows::Forms::RadioButton());
@@ -175,8 +191,6 @@ namespace akbcf
 			this->Cancel = (gcnew System::Windows::Forms::Button());
 			this->Apply = (gcnew System::Windows::Forms::Button());
 			this->FileDlg = (gcnew System::Windows::Forms::OpenFileDialog());
-			this->label1 = (gcnew System::Windows::Forms::Label());
-			this->label2 = (gcnew System::Windows::Forms::Label());
 			this->Tab->SuspendLayout();
 			this->Singles->SuspendLayout();
 			this->Combinations->SuspendLayout();
@@ -199,6 +213,9 @@ namespace akbcf
 			// 
 			// Singles
 			// 
+			this->Singles->Controls->Add(this->CAPS);
+			this->Singles->Controls->Add(this->RWin);
+			this->Singles->Controls->Add(this->LWin);
 			this->Singles->Controls->Add(this->label1);
 			this->Singles->Controls->Add(this->Esc);
 			this->Singles->Controls->Add(this->F1);
@@ -230,6 +247,57 @@ namespace akbcf
 			this->Singles->TabIndex = 0;
 			this->Singles->Text = L"単独";
 			this->Singles->UseVisualStyleBackColor = true;
+			// 
+			// CAPS
+			// 
+			this->CAPS->Appearance = System::Windows::Forms::Appearance::Button;
+			this->CAPS->Location = System::Drawing::Point(0, 60);
+			this->CAPS->Margin = System::Windows::Forms::Padding(0);
+			this->CAPS->Name = L"CAPS";
+			this->CAPS->Size = System::Drawing::Size(45, 25);
+			this->CAPS->TabIndex = 26;
+			this->CAPS->Text = L"CAPS";
+			this->CAPS->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->CAPS->UseVisualStyleBackColor = true;
+			this->CAPS->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// RWin
+			// 
+			this->RWin->Appearance = System::Windows::Forms::Appearance::Button;
+			this->RWin->Location = System::Drawing::Point(400, 90);
+			this->RWin->Margin = System::Windows::Forms::Padding(0);
+			this->RWin->Name = L"RWin";
+			this->RWin->Size = System::Drawing::Size(45, 25);
+			this->RWin->TabIndex = 25;
+			this->RWin->Text = L"右WIN";
+			this->RWin->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->RWin->UseVisualStyleBackColor = true;
+			this->RWin->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// LWin
+			// 
+			this->LWin->Appearance = System::Windows::Forms::Appearance::Button;
+			this->LWin->Location = System::Drawing::Point(100, 90);
+			this->LWin->Margin = System::Windows::Forms::Padding(0);
+			this->LWin->Name = L"LWin";
+			this->LWin->Size = System::Drawing::Size(45, 25);
+			this->LWin->TabIndex = 24;
+			this->LWin->Text = L"左WIN";
+			this->LWin->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->LWin->UseVisualStyleBackColor = true;
+			this->LWin->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// label1
+			// 
+			this->label1->AutoSize = true;
+			this->label1->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(128)));
+			this->label1->ForeColor = System::Drawing::SystemColors::ControlDark;
+			this->label1->Location = System::Drawing::Point(96, 46);
+			this->label1->Name = L"label1";
+			this->label1->Size = System::Drawing::Size(60, 21);
+			this->label1->TabIndex = 23;
+			this->label1->Text = L"label1";
 			// 
 			// Esc
 			// 
@@ -537,6 +605,9 @@ namespace akbcf
 			// 
 			// Combinations
 			// 
+			this->Combinations->Controls->Add(this->FnCAPS);
+			this->Combinations->Controls->Add(this->FnRWin);
+			this->Combinations->Controls->Add(this->FnLWin);
 			this->Combinations->Controls->Add(this->label2);
 			this->Combinations->Controls->Add(this->FnEsc);
 			this->Combinations->Controls->Add(this->FnF1);
@@ -567,6 +638,60 @@ namespace akbcf
 			this->Combinations->TabIndex = 1;
 			this->Combinations->Text = L"Fn +";
 			this->Combinations->UseVisualStyleBackColor = true;
+			// 
+			// FnCAPS
+			// 
+			this->FnCAPS->Appearance = System::Windows::Forms::Appearance::Button;
+			this->FnCAPS->Enabled = false;
+			this->FnCAPS->Location = System::Drawing::Point(0, 60);
+			this->FnCAPS->Margin = System::Windows::Forms::Padding(0);
+			this->FnCAPS->Name = L"FnCAPS";
+			this->FnCAPS->Size = System::Drawing::Size(45, 25);
+			this->FnCAPS->TabIndex = 29;
+			this->FnCAPS->Text = L"CAPS";
+			this->FnCAPS->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->FnCAPS->UseVisualStyleBackColor = true;
+			this->FnCAPS->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// FnRWin
+			// 
+			this->FnRWin->Appearance = System::Windows::Forms::Appearance::Button;
+			this->FnRWin->Enabled = false;
+			this->FnRWin->Location = System::Drawing::Point(400, 90);
+			this->FnRWin->Margin = System::Windows::Forms::Padding(0);
+			this->FnRWin->Name = L"FnRWin";
+			this->FnRWin->Size = System::Drawing::Size(45, 25);
+			this->FnRWin->TabIndex = 28;
+			this->FnRWin->Text = L"右WIN";
+			this->FnRWin->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->FnRWin->UseVisualStyleBackColor = true;
+			this->FnRWin->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// FnLWin
+			// 
+			this->FnLWin->Appearance = System::Windows::Forms::Appearance::Button;
+			this->FnLWin->Enabled = false;
+			this->FnLWin->Location = System::Drawing::Point(100, 90);
+			this->FnLWin->Margin = System::Windows::Forms::Padding(0);
+			this->FnLWin->Name = L"FnLWin";
+			this->FnLWin->Size = System::Drawing::Size(45, 25);
+			this->FnLWin->TabIndex = 27;
+			this->FnLWin->Text = L"左WIN";
+			this->FnLWin->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
+			this->FnLWin->UseVisualStyleBackColor = true;
+			this->FnLWin->CheckedChanged += gcnew System::EventHandler(this, &EditForm::SelectedChanged);
+			// 
+			// label2
+			// 
+			this->label2->AutoSize = true;
+			this->label2->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(128)));
+			this->label2->ForeColor = System::Drawing::SystemColors::ControlDark;
+			this->label2->Location = System::Drawing::Point(96, 46);
+			this->label2->Name = L"label2";
+			this->label2->Size = System::Drawing::Size(60, 21);
+			this->label2->TabIndex = 24;
+			this->label2->Text = L"label2";
 			// 
 			// FnEsc
 			// 
@@ -982,30 +1107,6 @@ namespace akbcf
 			// FileDlg
 			// 
 			this->FileDlg->AddExtension = false;
-			// 
-			// label1
-			// 
-			this->label1->AutoSize = true;
-			this->label1->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
-				static_cast<System::Byte>(128)));
-			this->label1->ForeColor = System::Drawing::SystemColors::ControlDark;
-			this->label1->Location = System::Drawing::Point(96, 46);
-			this->label1->Name = L"label1";
-			this->label1->Size = System::Drawing::Size(60, 21);
-			this->label1->TabIndex = 23;
-			this->label1->Text = L"label1";
-			// 
-			// label2
-			// 
-			this->label2->AutoSize = true;
-			this->label2->Font = (gcnew System::Drawing::Font(L"MS UI Gothic", 15.75F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
-				static_cast<System::Byte>(128)));
-			this->label2->ForeColor = System::Drawing::SystemColors::ControlDark;
-			this->label2->Location = System::Drawing::Point(96, 46);
-			this->label2->Name = L"label2";
-			this->label2->Size = System::Drawing::Size(60, 21);
-			this->label2->TabIndex = 24;
-			this->label2->Text = L"label2";
 			// 
 			// EditForm
 			// 
