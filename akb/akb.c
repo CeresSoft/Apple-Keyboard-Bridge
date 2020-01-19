@@ -95,6 +95,7 @@ enum
 {
 	VID_APPLE = 0x05AC,
 };
+
 //2019.07.15:SUGIHARA:CHANGE >>>>>
 //const static WORD PID_APPLE_KEYBOARD[] =
 //{
@@ -202,6 +203,7 @@ static BOOL IsSupportedDevice(DWORD index, LPCTSTR path, WORD vid, WORD pid, WOR
 	//----------
 	DEBUG(_T("-- [%d] Layout path='%s', vid=%04x pid=%04x, version=%04x\n"), index, path, vid, pid, version);
 
+	return TRUE;
 	//Apple Vender ID判定
 	if (vid != VID_APPLE)
 	{
@@ -694,14 +696,17 @@ static UINT OnKeyDown(DWORD vkCode)
 				return Fire(config.Fn.Esc);
 			}
 		case VK_LWIN:
-			DEBUG(_T("detected - VK_LWIN\n"));
-			return Fire(config.Key.LWin);
+			//DEBUG(_T("detected - VK_LWIN\n"));
+			//return Fire(config.Key.LWin);
+			break;
 		case VK_RWIN:
-			DEBUG(_T("detected - VK_RWIN\n"));
-			return Fire(config.Key.RWin);
+			//DEBUG(_T("detected - VK_RWIN\n"));
+			//return Fire(config.Key.RWin);
+			break;
 		case VK_CAPITAL:
-			DEBUG(_T("detected - VK_CAPITAL\n"));
-			return Fire(config.Key.CAPS);
+			//DEBUG(_T("detected - VK_CAPITAL\n"));
+			//return Fire(config.Key.CAPS);
+			break;
 		default:
 			break;
 		}
@@ -864,9 +869,14 @@ static HIDItem* SpecialKey_ThreadClear(HIDItem* pHID)
 static BOOL SpecialKey_PrepareImpl(HDEVINFO hDevInfo, PSP_DEVICE_INTERFACE_DATA pdiData, DWORD index)
 {
 	//デバイス詳細取得領域初期化
-	BYTE diDetailBuffer[sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA) + (sizeof(TCHAR) * MAX_PATH)];	//malloc()の代わり。こうすればfree()しなくて済む
+
+	//malloc()の代わり。こうすればfree()しなくて済む
+	BYTE diDetailBuffer[sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA) + (sizeof(TCHAR) * MAX_PATH)];
 	PSP_DEVICE_INTERFACE_DETAIL_DATA pdiDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)diDetailBuffer;
+
+	//Buffer Clear
 	ZeroMemory(pdiDetail, sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA));
+
 	//pdiDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)diDetailImpl;
 	pdiDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
@@ -892,7 +902,7 @@ static BOOL SpecialKey_PrepareImpl(HDEVINFO hDevInfo, PSP_DEVICE_INTERFACE_DATA 
 	if (hDevice == INVALID_HANDLE_VALUE)
 	{
 		//オープンできなかった場合は次のデバイスに進む
-		DEBUG(_T("- [DID=%d] Device Not Open. (Path='%s')\n"), index, pdiDetail->DevicePath);
+		DEBUG(_T("- [DID=%d] Device Not Opened. (Path='%s')\n"), index, pdiDetail->DevicePath);
 		return TRUE;
 	}
 
@@ -1038,6 +1048,7 @@ static BOOL SpecialKey_Prepare(void)
 		index += INDEX_STEP;
 		bLoop = WinAPI.Setup.EnumDeviceInterfaces(hDevInfo, NULL, &guid, index, &diData);
 	}
+	DEBUG(_T("Device Info Enum Finished. (index=%d)\n"), index);
 
 	//オープンしたデバイスが在るか判定
 	if (_FirstHIDItem == NULL)
@@ -1088,7 +1099,7 @@ static void SpecialKey_ThreadImpl(DWORD index, HANDLE hDevice, HANDLE sigOverlap
 
 		DEBUG(_T("[Thread] [DID=%d] Read Start\n"), index);
 		DWORD r;
-		BYTE buffer[22];
+		BYTE buffer[1024];
 
 		BOOL bRead = ReadFile(hDevice, buffer, sizeof(buffer), &r, &overlapped);
 		if (!bRead)
@@ -1105,8 +1116,17 @@ static void SpecialKey_ThreadImpl(DWORD index, HANDLE hDevice, HANDLE sigOverlap
 			if (w != WAIT_OBJECT_0)
 			{
 				//最初のシグナル以外(=終了シグナル)の場合ループを終了する
+				DEBUG(_T("[Thread] [DID=%d] Read Cancel Event Detected\n"), index);
 				return;
 			}
+			else
+			{
+				DEBUG(_T("[Thread] [DID=%d] Read Finish\n"), index);
+			}
+		}
+		else
+		{
+			DEBUG(_T("[Thread] [DID=%d] Read Success\n"), index);
 		}
 		BYTE byFirst = buffer[INDEX_FIRST];
 		BYTE bySecond = buffer[INDEX_SECOND];
@@ -1253,10 +1273,20 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			/* low level keyboard hook */
 			Global.hHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
 
+			//
 			if (!SpecialKey_Prepare())
 			{
 				Shell_NotifyIcon(NIM_MODIFY, &nid);
 			}
+		}
+		//RAW-INPUT
+		{
+			RAWINPUTDEVICE Rid[1];
+			Rid[0].usUsagePage = 0x01;
+			Rid[0].usUsage = 0x06;     //0x02にするとマウス。
+			Rid[0].dwFlags = RIDEV_INPUTSINK; //ここを変更。それだけ。
+			Rid[0].hwndTarget = hWnd;
+			RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
 		}
 		break;
 	case WM_DESTROY:
@@ -1269,6 +1299,34 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		}
 		PostQuitMessage(0);
 		return 0;
+	case WM_INPUT:
+		{
+			UINT dwSize = 40;
+			BYTE lpb[40];
+
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
+			RAWINPUT* raw = (RAWINPUT*)lpb;
+
+			//ここにHIDをここに収納できる。
+			HANDLE Device_HID = raw->header.hDevice;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE)
+			{
+				// read the mouse data
+			}
+
+			if (raw->header.dwType == RIM_TYPEKEYBOARD)
+			{
+				// read the keyboard data
+				USHORT code = raw->data.keyboard.MakeCode;
+				USHORT flag = raw->data.keyboard.Flags;
+				USHORT vkey = raw->data.keyboard.VKey;
+				UINT msg = raw->data.keyboard.Message;
+				ULONG exInfo = raw->data.keyboard.ExtraInformation;
+				DEBUG(_T("KEY code=0x%02X flag=0x%04X vkey=0x%02X msg=%08X exInfo=%08X\n"), code, flag, vkey, msg, exInfo);
+			}
+		}
+		break;
 	}
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
