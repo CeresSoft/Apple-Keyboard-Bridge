@@ -103,3 +103,28 @@ void WinAPI_Uninitialize(void)
 	FreeLibrary(WinAPI.HID.hDLL);
 	FreeLibrary(WinAPI.MCI.hDLL);
 }
+
+
+WINBASEAPI
+DWORD
+WINAPI
+GetFinalPathNameByHandleA(
+	__in HANDLE hFile,
+	__out_ecount(cchFilePath) LPSTR lpszFilePath,
+	__in DWORD cchFilePath,
+	__in DWORD dwFlags
+);
+WINBASEAPI
+DWORD
+WINAPI
+GetFinalPathNameByHandleW(
+	__in HANDLE hFile,
+	__out_ecount(cchFilePath) LPWSTR lpszFilePath,
+	__in DWORD cchFilePath,
+	__in DWORD dwFlags
+);
+#ifdef UNICODE
+#define GetFinalPathNameByHandle  GetFinalPathNameByHandleW
+#else
+#define GetFinalPathNameByHandle  GetFinalPathNameByHandleA
+#endif // !UNICODE

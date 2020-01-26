@@ -3,6 +3,7 @@
  */
 #include "../common/akb.h"
 #include "winapi.h"
+#include <Windows.h>
 
 #include "resource.h"
 
@@ -620,7 +621,7 @@ static UINT Fire(UINT what)
 static UINT OnKeyDown(DWORD vkCode)
 {
 	//2019.07.15:SUGIHARA:ADD >>>>>
-	DEBUG(_T("VK=0x%X Fn=%d\n"), vkCode, Status.Fn);
+	DEBUG(_T("VK=0x%02X Fn=%d\n"), vkCode, Status.Fn);
 	//2019.07.15:SUGIHARA:ADD <<<<<
 	if (Status.Fn) {
 		switch (vkCode) {
@@ -723,6 +724,7 @@ enum
 };
 static UINT OnScanUp(DWORD scanCode)
 {
+	DEBUG(_T("SCAN=0x%02X\n"), scanCode);
 	switch (scanCode) {
 	case SCANCODE_ALNUM: return Fire(config.Key.Alnum);
 	case SCANCODE_KANA : return Fire(config.Key.Kana );
@@ -755,30 +757,41 @@ static void OnPower(BOOL power)
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (nCode < 0)
+	{
 		return CallNextHookEx(Global.hHook, nCode, wParam, lParam);
-	if (nCode == HC_ACTION) {
+	}
+	if (nCode == HC_ACTION)
+	{
 		LPKBDLLHOOKSTRUCT pkbs = (LPKBDLLHOOKSTRUCT)lParam;
-		switch (pkbs->vkCode) {
+		switch (pkbs->vkCode)
+		{
 		case VK_LSHIFT:
 		case VK_RSHIFT:
 		case VK_LMENU:
 		case VK_RMENU:
 		case VK_LCONTROL:
 		case VK_RCONTROL:
+			DEBUG(_T("MODIFIER VKEY=0x%02X\n"), pkbs->vkCode);
 			return CallNextHookEx(Global.hHook, nCode, wParam, lParam);
 		}
 		if (pkbs->dwExtraInfo == MY_EXTRA_INFO)
+		{
+			DEBUG(_T("EXTRA VKEY=0x%02X\n"), pkbs->vkCode);
 			return CallNextHookEx(Global.hHook, nCode, wParam, lParam);
-
+		}
 		switch (wParam) {
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 			if (OnKeyDown(pkbs->vkCode))
+			{
 				return TRUE;
+			}
 			break;
 		case WM_KEYUP:
 			if (OnScanUp(pkbs->scanCode))
+			{
 				return TRUE;
+			}
 			break;
 		}
 	}
@@ -1284,7 +1297,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			RAWINPUTDEVICE Rid[1];
 			Rid[0].usUsagePage = 0x01;
 			Rid[0].usUsage = 0x06;     //0x02にするとマウス。
-			Rid[0].dwFlags = RIDEV_INPUTSINK; //ここを変更。それだけ。
+			Rid[0].dwFlags = RIDEV_INPUTSINK | RIDEV_NOLEGACY | RIDEV_APPKEYS | RIDEV_NOHOTKEYS | RIDEV_EXINPUTSINK; //ここを変更。それだけ。
 			Rid[0].hwndTarget = hWnd;
 			RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
 		}
@@ -1301,14 +1314,46 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		return 0;
 	case WM_INPUT:
 		{
-			UINT dwSize = 40;
-			BYTE lpb[40];
+			//RAWINPUT構造体のサイズを取得
+			UINT dwSize = 0;
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+			DEBUG(_T("RAWINPUT SIZE=%d\n"), dwSize);
+			if (dwSize < sizeof(RAWINPUTHEADER))
+			{
+				//RAWINPUTHEADERより小さい場合は異常なので終了
+				return 0;
+			}
 
-			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
-			RAWINPUT* raw = (RAWINPUT*)lpb;
+			//構造体サイズ取得
+			LPBYTE lpb = (LPBYTE)malloc(dwSize);
+			if (lpb == NULL)
+			{
+				//バッファ確保失敗なので終了
+				return 0;
+			}
+
+			//構造体取得
+			DWORD ret = GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
+			if (ret == dwSize)
+			{
+				//成功の場合は処理続行
+			}
+			else
+			{
+				//失敗の場合は処理中断
+				free(lpb);
+				return 0;
+			}
+			LPRAWINPUT raw = (LPRAWINPUT)lpb;
 
 			//ここにHIDをここに収納できる。
 			HANDLE Device_HID = raw->header.hDevice;
+			{
+				TCHAR path[MAX_PATH];
+				ZeroMemory(path, sizeof(path));
+				int ret = GetFinalPathNameByHandle(Device_HID, path, MAX_PATH, FILE_NAME_OPENED| VOLUME_NAME_NT);
+				DEBUG(_T("PATH path='%s' ret=%d\n"), path, ret);
+			}
 
 			if (raw->header.dwType == RIM_TYPEMOUSE)
 			{
@@ -1325,6 +1370,28 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				ULONG exInfo = raw->data.keyboard.ExtraInformation;
 				DEBUG(_T("KEY code=0x%02X flag=0x%04X vkey=0x%02X msg=%08X exInfo=%08X\n"), code, flag, vkey, msg, exInfo);
 			}
+
+			if(raw->header.dwType == RIM_TYPEHID)
+				//追加情報
+			{
+				DWORD count = raw->data.hid.dwCount;
+				DWORD size = raw->data.hid.dwSizeHid;
+				DEBUG(_T("RAWHID COUNT=%d / SIZE=%d\n"), count, size);
+				DWORD m = count * size;
+				BYTE* p = &(raw->data.hid.bRawData);
+				DEBUG(_T("DATA="));
+				for (DWORD i = 0; i < m; i += 1)
+				{
+					DEBUG(_T(",0x%02X"), i, p[i]);
+				}
+				DEBUG(_T("\n"));
+			}
+
+			//メモリ開放
+			free(lpb);
+
+			//終了
+			return 0;
 		}
 		break;
 	}
